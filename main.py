@@ -1,69 +1,102 @@
-import time
-
 import cv2
+import numpy as np
 
+# #задание 1
 
-def image_processing():
-    img = cv2.imread('img_test.jpg')
-    #cv2.imshow('image', img)
-    w, h = img.shape[:2]
-    #(cX, cY) = (w // 2, h // 2)
-    #M = cv2.getRotationMatrix2D((cX, cY), 45, 1.0)
-    #rotated = cv2.warpAffine(img, M, (w, h))
-    #cv2.imshow('rotated', rotated)
+image = cv2.imread("images/variant-10.jpg", cv2.IMREAD_GRAYSCALE)
 
-    #cat = img[250:580, 20:280]
-    #cv2.imshow('image', cat)
+ret, thresholded_image = cv2.threshold(image, 150, 255, cv2.THRESH_BINARY)
 
-    #r = cv2.selectROI(img)
-    #image_cropped = img[int(r[1]):int(r[1] + r[3]), int(r[0]):int(r[0] + r[2])]
-    #cv2.imshow('cropped', image_cropped)
-
-    cv2.line(img, (0, 0), (580, 600), (255, 0, 0), 5)
-    cv2.rectangle(img, (384, 10), (580, 128), (0, 252, 0), 3)
-    cv2.putText(img, 'Lab. No 8', (10, 500), cv2.FONT_HERSHEY_SIMPLEX, 3,
-                (0, 0, 255), 2, cv2.LINE_AA)
-    cv2.imshow('img', img)
-
-
-def video_processing():
-    cap = cv2.VideoCapture(1)
-    down_points = (640, 480)
-    i = 0
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        frame = cv2.resize(frame, down_points, interpolation=cv2.INTER_LINEAR)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.GaussianBlur(gray, (21, 21), 0)
-        ret, thresh = cv2.threshold(gray, 110, 255, cv2.THRESH_BINARY_INV)
-
-        contours, hierarchy = cv2.findContours(thresh,
-                            cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-        if len(contours) > 0:
-            c = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(c)
-            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-            if i % 5 == 0:
-                a = x + (w // 2)
-                b = y + (h // 2)
-                print(a, b)
-
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
-        time.sleep(0.1)
-        i += 1
-
-    cap.release()
-
-
-if __name__ == '__main__':
-    #image_processing()
-    video_processing()
-
+cv2.imshow("changed image", thresholded_image)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
+
+
+# #задание 2
+
+cap = cv2.VideoCapture(0)
+
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+square_size = 150
+x_square = int((frame_width - square_size) / 2)
+y_square = int((frame_height - square_size) / 2)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+
+    if ret:
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        mask = cv2.inRange(hsv_frame, np.array([0, 0, 0]), np.array([180, 255, 30]))
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in contours:
+            if cv2.contourArea(contour) > 1000:
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+
+        if x_square <= x <= x_square + square_size and y_square <= y <= y_square + square_size:
+            frame = cv2.flip(frame, 0)  
+
+        cv2.imshow('Frame', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):  
+            break
+    else:
+        break
+
+cap.release()
+cv2.destroyAllWindows()
+
+
+#доп_задание
+
+fly_image = cv2.imread('fly64.png', cv2.IMREAD_UNCHANGED)
+
+cap = cv2.VideoCapture(0)
+
+frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+square_size = 150
+x_square = int((frame_width - square_size) / 2)
+y_square = int((frame_height - square_size) / 2)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+
+    if ret:
+        hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        mask = cv2.inRange(hsv_frame, np.array([0, 0, 0]), np.array([180, 255, 30]))
+
+        contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        for contour in contours:
+            if cv2.contourArea(contour) > 1000:
+                x, y, w, h = cv2.boundingRect(contour)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                center_x = x + w // 2
+                center_y = y + h // 2
+
+                fly_height, fly_width, _ = fly_image.shape
+
+                fly_x = center_x - fly_width // 2
+                fly_y = center_y - fly_height // 2
+
+                if fly_y >= 0 and fly_x >= 0 and fly_y + fly_height <= frame.shape[0] and fly_x + fly_width <= frame.shape[1]:
+                    for c in range(3):
+                        frame[fly_y:fly_y + fly_height, fly_x:fly_x + fly_width, c] = \
+                            fly_image[:, :, c] * (fly_image[:, :, 3] / 255) + \
+                            frame[fly_y:fly_y + fly_height, fly_x:fly_x + fly_width, c] * (1 - fly_image[:, :, 3] / 255)
+                        
+        cv2.imshow('Frame', frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'):  
+            break
+    else:
+        break
+
+cap.release()
 cv2.destroyAllWindows()
